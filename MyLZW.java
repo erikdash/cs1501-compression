@@ -29,30 +29,30 @@ public class MyLZW {
         double comp = 0;
         double oldRatio = 0;
         double newRatio = 0;
-        double ratioRatio;
-        int ratioStarter = 0;
+        double ratioRatio = 0;
+        boolean ratioStarter = false;
         for (int i = 0; i < R; i++)
             st.put("" + (char) i, i);
         int code = R+1;  // R is codeword for EOF
         
         while (input.length() > 0) {
-            String s = st.longestPrefixOf(input); // Find max prefix match s.
+            String s = st.longestPrefixOf(input); // Find max prefix match s.            
+            uncomp += s.length() * 8;
             BinaryStdOut.write(st.get(s), W); // Print s's encoding.
             comp += W;
             int t = s.length();
-            uncomp += t * 8;
+            
             if (t < input.length() && code < L)    // Add s to symbol table.
             {
-                st.put(input.substring(0, t + 1), code++);
+                st.put(input.substring(0, t + 1), code++);                
             }
-            else if(t < input.length() && code >= L && W != 16)
+            else if(t < input.length() && code == L && W < 16)
             {
                 W++;
                 L = (int)Math.pow(2, W);                
                 st.put(input.substring(0, t + 1), code++);
-                //System.err.println("New W:" + W + " New L:" + L);
             }
-            else if(t < input.length() && code >= L && W == 16)
+            else if(t < input.length() && code == L && W == 16)
             {
                 if(fullCodebook.equals("n"))
                 {
@@ -68,26 +68,20 @@ public class MyLZW {
                     }
                     code = R+1; //reset code value
                     W = 9; //reset W to 9
-                    L = 512; //reset L to 2^9 (which is 512)
-                    
-                    st.put(input.substring(0, t+1), code++);
+                    L = 512; //reset L to 2^9 (which is 512)                    
                 }
                 else if(fullCodebook.equals("m"))
-                {
-                    //System.err.println("Monitoring...");
-                    //"Monitor" mode
-                    //set current ratio to old ratio                    
-                    if(ratioStarter == 0)
+                {                  
+                    if(ratioStarter == false)
                     {
+                        System.err.println("Monitoring...");
                         oldRatio = uncomp/comp;
-                        newRatio = uncomp/comp;
-                        ratioStarter++;
+                        ratioStarter = true;
                     }
-                    else
+                    else if(ratioStarter == true)
                     {
-                        oldRatio = newRatio;
-                        newRatio = uncomp/comp;//Calculate new ratio
-                        ratioRatio = oldRatio/newRatio;//calculate ratio ratio                        
+                        newRatio = uncomp/comp;
+                        ratioRatio = oldRatio/newRatio;
                         if(ratioRatio > 1.1)//decide if need to reset or not
                         {
                             //RESET
@@ -101,12 +95,13 @@ public class MyLZW {
                             code = R+1; //reset code value
                             W = 9; //reset W to 9
                             L = 512; //reset L to 2^9 (which is 512)
-                    
-                            st.put(input.substring(0, t+1), code++);
+                            oldRatio = 0;
+                            newRatio = 0;
+                            ratioStarter = false;
                         }
-                    }                    
+                    }                  
                 }
-            }
+            }            
             input = input.substring(t);            // Scan past s in input.
         }
         BinaryStdOut.write(R, W);
@@ -120,42 +115,31 @@ public class MyLZW {
         double uncomp = 0;
         double oldRatio = 0;
         double newRatio = 0;
-        double ratioRatio;
-        int ratioStarter = 0;
+        double ratioRatio = 0;
+        boolean ratioStarter = false;
         // initialize symbol table with all 1-character strings
         for (i = 0; i < R; i++)
             st[i] = "" + (char) i;
         st[i++] = "";                        // (unused) lookahead for EOF
 
-        int codeword = BinaryStdIn.readInt(W);
-        comp += W;
-        if (codeword == R) return;           // expanded message is empty string
+        int codeword = BinaryStdIn.readInt(W);     
+        //comp += W;
+        if (codeword == R) return;           // expanded message is empty string        
         String val = st[codeword];
 
         while (true) {
-            BinaryStdOut.write(val);
             uncomp += val.length() * 8;
-            codeword = BinaryStdIn.readInt(W);
-            //comp += W;
-            if (codeword == R) break;
-            String s = st[codeword];
-            if (i == codeword) s = val + val.charAt(0);   // special case hack
-            if (i < L-1) 
-            {
-                st[i++] = val + s.charAt(0);
-            }
-            else if(i >= L-1 && W != 16)
+            comp += W;            
+            if(i == L && W < 16)
             {
                 W++;
                 L = (int)Math.pow(2, W);
-                st[i++] = val + s.charAt(0);
-                //System.err.println("New W:" + W + " New L:" + L);
             }
-            else if(i >= L-1 && W == 16)
+            else if(i == L && W == 16)
             {
                 if(fullCodebook.equals("n"))
                 {
-                    
+                    //do nothing
                 }
                 else if(fullCodebook.equals("r"))
                 {
@@ -165,48 +149,51 @@ public class MyLZW {
                     {
                         st[i] = "" + (char) i;
                     } //re-add all ASCII values to codebook array
-                    //st[i++] = "";  //NEW LINE
-                    //i = R+1; //set i to first value after ASCII values
                     W = 9; //reset W to 9
                     L = 512; //reset L to 2^9 (which is 512)
-                    
-                    st[i++] = val + s.charAt(0);
                 }
                 else if(fullCodebook.equals("m"))
                 {
-                    //"Monitor" mode
-                    System.err.println("Monitoring...");
-                    if(ratioStarter == 0)
+                    if(ratioStarter == false)
                     {
+                        System.err.println("Monitoring...");
                         oldRatio = uncomp/comp;
-                        newRatio = uncomp/comp;
-                        ratioStarter++;
+                        ratioStarter = true;
                     }
-                    else
+                    else if(ratioStarter == true)
                     {
-                        oldRatio = newRatio;
-                        newRatio = uncomp/comp;//Calculate new ratio
-                        ratioRatio = oldRatio/newRatio;//calculate ratio ratio  
-                        System.err.println("Ratio of ratios:" + ratioRatio);                        
+                        newRatio = uncomp/comp;
+                        ratioRatio = oldRatio/newRatio;
                         if(ratioRatio > 1.1)//decide if need to reset or not
                         {
                             //RESET
-                            //System.err.println("Ratio of ratios:" + ratioRatio);
+                            System.err.println("Ratio of ratios:" + ratioRatio);
                             System.err.println("Resetting codebook...");
                             st = new String[65536]; //reset codebook array
                             for (i = 0; i < R; i++)
                             {
                                 st[i] = "" + (char) i;
                             } //re-add all ASCII values to codebook array
-                            //st[i++] = "";  //NEW LINE
-                            //i = R+1; //set i to first value after ASCII values
                             W = 9; //reset W to 9
                             L = 512; //reset L to 2^9 (which is 512)
-                    
-                            st[i++] = val + s.charAt(0);
+                            oldRatio = 0;
+                            newRatio = 0;
+                            ratioStarter = false;
                         }
-                    }
+                    }   
                 }
+            }
+            BinaryStdOut.write(val);
+            codeword = BinaryStdIn.readInt(W);
+            if (codeword == R) break;
+            String s;// = st[codeword];
+            if (i == codeword) s = val + val.charAt(0); 
+            else s = st[codeword];
+            if (i < L) 
+            {
+                //System.err.println(i);
+                //System.err.println("Here");
+                st[i++] = val + s.charAt(0);
             }
             val = s;
         }
@@ -238,7 +225,7 @@ public class MyLZW {
             String line = br.readLine();
             fullCodebook = line.toString();
             br.close();
-            System.err.println(fullCodebook);
+            System.err.println(fullCodebook + " mode");
             if((fullCodebook == null) || (!(fullCodebook.equals("n")) && !(fullCodebook.equals("r")) && !(fullCodebook.equals("m"))))
             {
                 throw new IllegalArgumentException("Must enter a full codebook mode choice");
