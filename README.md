@@ -1,1 +1,1 @@
-# compression
+# lzw-compression
