@@ -1,1 +1,1 @@
-# cs1501-compression
+# compression
